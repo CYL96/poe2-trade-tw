@@ -1,0 +1,39 @@
+{
+   "action": {
+      "default_icon": "images/icon.png",
+      "default_popup": "options.html",
+      "default_title": "POE2 Trade zh"
+   },
+   "background": {
+      "service_worker": "js/background.js"
+   },
+   "content_scripts": [ {
+      "js": [ "js/trade-data.js" ],
+      "matches": [ "https://www.pathofexile.com/trade2/*" ],
+      "run_at": "document_start",
+      "world": "MAIN"
+   }, {
+      "js": [ "js/app.js" ],
+      "matches": [ "https://www.pathofexile.com/trade2/*" ],
+      "run_at": "document_start"
+   }, {
+      "js": [ "js/result.js" ],
+      "matches": [ "https://www.pathofexile.com/trade2/*" ],
+      "run_at": "document_end"
+   } ],
+   "description": "讓國際版 POE2 Trade 網頁支援中文裝備、詞綴搜尋",
+   "host_permissions": [ "https://www.pathofexile.com/trade2/*", "https://pathofexile.tw/trade2/*", "https://poe.game.qq.com/api/trade2/*" ],
+   "icons": {
+      "128": "images/128x128.png",
+      "48": "images/icon.png"
+   },
+   "manifest_version": 3,
+   "name": "POE2 Trade zh",
+   "permissions": [ "storage", "unlimitedStorage" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "0.1.5",
+   "web_accessible_resources": [ {
+      "matches": [ "https://www.pathofexile.com/*" ],
+      "resources": [ "js/translate.zh_TW.js" ]
+   } ]
+}
