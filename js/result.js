@@ -51,6 +51,14 @@ const checkLoaded = () => {
   translate()
 }
 
+// Advanced item descriptions can split values and ranges across lines.
+const matchAffix = (template, text) => {
+  const pattern = template.split(' (')[0].split('#').map((part) =>
+    part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*')
+  ).join('\\s*([+\\-\\d(][\\d.,+\\-()—–\\s]*?)\\s*')
+  return new RegExp(`^\\s*${pattern}\\s*$`, 'i').exec(text)
+}
+
 let timer
 const translate = () => {
   if (timer) {
@@ -118,57 +126,25 @@ const translate = () => {
           // commom
           // fixed " (Local)"
           usString = usString.split(' (')[0]
-          let regExpString = usString
-            .replace(/\+/gim, '\\+')
-            .replace(/%/gim, '\\%')
-            .replace(/#/gim, '(\\S+)')
-          let affixRegExp = new RegExp(regExpString, 'igm')
-          let match = affixRegExp.exec(originalString)
-          // console.log('affixRegExp', affixRegExp)
-          // console.log('originalString', originalString)
-          // console.log('match', match)
+          let match = matchAffix(usString, originalString)
           // increased 增加 reduced 減少 嘗試對調比對
           if (!!match === false) {
-            if (originalString.indexOf('increased') >= 0) {
-              // console.log('increased', originalString)
-              usString = usString.replace(/increased/gim, 'reduced')
-              zhString = zhString.replace(/增加/gim, '減少')
-              regExpString = usString
-                .replace(/\+/gim, '\\+')
-                .replace(/%/gim, '\\%')
-                .replace(/#/gim, '(\\S+)')
-              affixRegExp = new RegExp(regExpString, 'igm')
-              match = affixRegExp.exec(originalString)
-            } else if (originalString.indexOf('reduced') >= 0) {
-              // console.log('reduced', originalString)
-              usString = usString.replace(/reduced/gim, 'increased')
-              zhString = zhString.replace(/減少/gim, '增加')
-              regExpString = usString
-                .replace(/\+/gim, '\\+')
-                .replace(/%/gim, '\\%')
-                .replace(/#/gim, '(\\S+)')
-              affixRegExp = new RegExp(regExpString, 'igm')
-              match = affixRegExp.exec(originalString)
+            if (/reduced/i.test(originalString) && /increased/i.test(usString)) {
+              usString = usString.replace(/increased/gi, 'reduced')
+              zhString = zhString.replace(/增加/g, '減少')
+              match = matchAffix(usString, originalString)
+            } else if (/increased/i.test(originalString) && /reduced/i.test(usString)) {
+              usString = usString.replace(/reduced/gi, 'increased')
+              zhString = zhString.replace(/減少/g, '增加')
+              match = matchAffix(usString, originalString)
             }
           }
           if (match && match.length >= 1) {
             match.shift()
             zhString = zhString.replace(/#/gim, () => match.shift())
           } else {
-            // 是否為固定數值
-            let numRange = elm.parentNode.querySelector('.lc .d')?.innerText.replace('&nbsp;', '').trim().slice(1, -1)
-            // console.log('numRange', numRange)
-            if (Number.isNaN(numRange)) {
-              zhString = zhString.replace(/#/gim, numRange)
-            } else if (numRange) {
-              const myArray = numRange.split('—', 2);
-              // console.log(myArray)
-              if (myArray[0] == myArray[1]) {
-                zhString = zhString.replace(/#/gim, myArray[0])
-              } else {
-               zhString = elm.innerText
-              }
-            }
+            // Leave unmatched text untouched instead of duplicating English or guessing values.
+            return
           }
         } else if (usString !== originalString) {
           // [Bow Attacks fire an additional Arrow]
