@@ -24,8 +24,6 @@ let changeLanguage = async (language) => {
     getCacheData('us').then(async ({ items, stats, static, filters }) => {
       const translateFile = chrome.runtime.getURL('json/translate.json')
       let translate = await fetch(translateFile).then((res) => res.json())
-      const passivesNotableFile = chrome.runtime.getURL('json/passivesNotable.json')
-      let passivesNotable = await fetch(passivesNotableFile).then((res) => res.json())
       // items
       items.result.forEach((category) => {
         category.entries.forEach((item) => {
@@ -88,7 +86,7 @@ let changeLanguage = async (language) => {
         })
         // finish
         chrome.storage.local.set({
-          translation: { items, stats, static, passivesNotable, filters, itemNames: translate },
+          translation: { items, stats, static, filters },
           status: 'done',
           updated: +new Date(),
           statusUI: 'progress',

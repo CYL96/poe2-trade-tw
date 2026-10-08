@@ -29,9 +29,12 @@ chrome.storage.local.get('language', ({ language }) => {
         affix_us[entry.id] = entry.text
       })
     })
-    chrome.storage.local.get(['translation'], ({ translation }) => {
-      passivesNotable = translation.passivesNotable
-      itemNames = translation.itemNames || {}
+    Promise.all([
+      fetch(chrome.runtime.getURL('json/passivesNotable.json')).then((response) => response.json()),
+      fetch(chrome.runtime.getURL('json/translate.json')).then((response) => response.json()),
+    ]).then(([notables, names]) => {
+      passivesNotable = notables
+      itemNames = names
       checkLoaded()
     })
   })
@@ -70,7 +73,7 @@ const translate = () => {
     // Result titles are separate from the translated item search options.
     document.querySelectorAll('.itemHeader').forEach((header) => {
       if (header.classList.contains('translated')) return
-      const name = header.querySelector('.itemName .lc')
+      const name = header.querySelector('.itemName:not(.typeLine) .lc')
       const type = header.querySelector('.typeLine .lc')
       if (!type) return
       const originalType = type.innerText.trim()
