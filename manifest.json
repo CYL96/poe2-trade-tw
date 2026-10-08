@@ -31,7 +31,7 @@
    "name": "POE2 Trade zh",
    "permissions": [ "storage", "unlimitedStorage" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "0.1.7",
+   "version": "0.1.8",
    "web_accessible_resources": [ {
       "matches": [ "https://www.pathofexile.com/*" ],
       "resources": [ "js/translate.zh_TW.js" ]
