@@ -41,7 +41,7 @@ chrome.storage.local.get('language', ({ language }) => {
 })
 
 const checkLoaded = () => {
-  const selector = '[data-field], .notableProperty, .itemHeader'
+  const selector = '[data-field], .item-popup__header, .item-popup span[style*="--colour-augmented"]'
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -71,10 +71,11 @@ const translate = () => {
   }
   timer = window.setTimeout(() => {
     // Result titles are separate from the translated item search options.
-    document.querySelectorAll('.itemHeader').forEach((header) => {
+    document.querySelectorAll('.item-popup__header').forEach((header) => {
       if (header.classList.contains('translated')) return
-      const name = header.querySelector('.itemName:not(.typeLine) .lc')
-      const type = header.querySelector('.typeLine .lc')
+      const lines = header.querySelectorAll('.item-popup__header-line')
+      const name = lines.length > 1 ? lines[0] : null
+      const type = lines[lines.length - 1]
       if (!type) return
       const originalType = type.innerText.trim()
       const originalName = name?.innerText.trim()
@@ -197,14 +198,11 @@ const translate = () => {
         elm.innerHTML = `${zhString}<div style="color: #83838d;font-size: 12px;">${elm.innerText}</div>`
       })
 
-    // passives Notable description
-    let passiveNotableDescription = document.querySelectorAll('.notableProperty')
-    Array.prototype.filter
-      .call(passiveNotableDescription, (elm) => !~elm.className.indexOf('translated'))
-      .forEach((elm) => {
-        const colourAugmented = elm.querySelector('.colourAugmented')
-        const description = elm.querySelector('.lc')
-        if (!colourAugmented || !description) return
+    // The current trade renderer uses an augmented name span followed by breaks.
+    const passiveNames = document.querySelectorAll('.item-popup div > span[style*="--colour-augmented"]')
+    passiveNames.forEach((colourAugmented) => {
+        const description = colourAugmented.parentElement
+        if (description.classList.contains('translated') || !description.querySelector('br')) return
         const name = colourAugmented.innerText.replace(/\s+/g, ' ').trim()
         const lines = description.innerHTML.split(/<br\s*\/?\s*>/i)
         const effects = lines.slice(1).map((html) => {
@@ -229,7 +227,7 @@ const translate = () => {
           description.append(document.createElement('br'), document.createTextNode(text))
         }
         description.appendChild(english)
-        elm.classList.add('translated')
+        description.classList.add('translated')
       })
   }, 100)
 }
