@@ -208,8 +208,8 @@ const translate = () => {
           text.innerHTML = html
           return text.textContent
         }).join(' ')
-        // Line wrapping and capitalization are presentation, not passive identity.
-        const normalize = (text) => text.replace(/\s+/g, '').toLowerCase()
+        // Wrapping, capitalization, and Cooldown Use/Uses do not change the effect.
+        const normalize = (text) => text.replace(/\bCooldown Uses\b/gi, 'Cooldown Use').replace(/\s+/g, '').toLowerCase()
         const variant = passivesNotable[name]?.find((entry) =>
           normalize(entry.en.desc.join(' ')) === normalize(effects)
         )
