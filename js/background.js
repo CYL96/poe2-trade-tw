@@ -88,7 +88,7 @@ let changeLanguage = async (language) => {
         })
         // finish
         chrome.storage.local.set({
-          translation: { items, stats, static, passivesNotable, filters },
+          translation: { items, stats, static, passivesNotable, filters, itemNames: translate },
           status: 'done',
           updated: +new Date(),
           statusUI: 'progress',

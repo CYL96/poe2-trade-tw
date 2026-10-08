@@ -2,6 +2,7 @@ const affix_zh = {}
 const affix_us = {}
 // passives Notable description
 let passivesNotable = []
+let itemNames = {}
 let passives_notable_zh = {}
 let passives_notable_us = {}
 
@@ -30,13 +31,14 @@ chrome.storage.local.get('language', ({ language }) => {
     })
     chrome.storage.local.get(['translation'], ({ translation }) => {
       passivesNotable = translation.passivesNotable
+      itemNames = translation.itemNames || {}
       checkLoaded()
     })
   })
 })
 
 const checkLoaded = () => {
-  const selector = '[data-field], .notableProperty'
+  const selector = '[data-field], .notableProperty, .itemHeader'
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -65,6 +67,30 @@ const translate = () => {
     window.clearTimeout(timer)
   }
   timer = window.setTimeout(() => {
+    // Result titles are separate from the translated item search options.
+    document.querySelectorAll('.itemHeader').forEach((header) => {
+      if (header.classList.contains('translated')) return
+      const name = header.querySelector('.itemName .lc')
+      const type = header.querySelector('.typeLine .lc')
+      if (!type) return
+      const originalType = type.innerText.trim()
+      const originalName = name?.innerText.trim()
+      const localizedType = itemNames[originalType]?.[lang]?.split(' (')[0]
+      const localizedItem = itemNames[`${originalName} ${originalType}`]?.[lang]?.split(' (')[0]
+      const localizedName = localizedType && localizedItem?.endsWith(` ${localizedType}`)
+        ? localizedItem.slice(0, -localizedType.length - 1)
+        : null
+      for (const [element, text, original] of [[name, localizedName, originalName], [type, localizedType, originalType]]) {
+        if (!element || !text || text === original) continue
+        element.textContent = text
+        const english = document.createElement('div')
+        english.style.cssText = 'color: #83838d; font-size: 12px;'
+        english.textContent = original
+        element.appendChild(english)
+      }
+      if (localizedType) header.classList.add('translated')
+    })
+
     // mods
     let mods = document.querySelectorAll('[data-field]') // [data-mod] [data-field]
     Array.prototype.filter
@@ -173,23 +199,24 @@ const translate = () => {
     Array.prototype.filter
       .call(passiveNotableDescription, (elm) => !~elm.className.indexOf('translated'))
       .forEach((elm) => {
-        let colourAugmented = elm.querySelector('.colourAugmented')
-        let name = colourAugmented.innerText
-        let translate = passivesNotable[name] && passivesNotable[name][lang]
-        if (!translate) {
-          return
+        const colourAugmented = elm.querySelector('.colourAugmented')
+        const description = elm.querySelector('.lc')
+        if (!colourAugmented || !description) return
+        const name = colourAugmented.innerText.trim()
+        const localized = passivesNotable[name]?.[lang]
+        if (!localized) return
+        const lines = description.innerHTML.split(/<br\s*\/?\s*>/i)
+        // Do not erase effects when the stored description does not match this item.
+        if (lines.length - 1 !== localized.desc.length) return
+        const english = document.createElement('div')
+        english.style.cssText = 'color: #83838d; font-size: 12px;'
+        english.textContent = description.innerText
+        colourAugmented.textContent = localized.name
+        description.replaceChildren(colourAugmented)
+        for (const text of localized.desc) {
+          description.append(document.createElement('br'), document.createTextNode(text))
         }
-        colourAugmented.innerText = translate.name
-        elm.querySelector('.lc').innerHTML = elm
-          .querySelector('.lc')
-          .innerHTML.split('<br>')
-          .map((html, index) => {
-            if (index === 0) {
-              return html
-            }
-            return translate.desc[index - 1]
-          })
-          .join('<br>')
+        description.appendChild(english)
         elm.classList.add('translated')
       })
   }, 100)
