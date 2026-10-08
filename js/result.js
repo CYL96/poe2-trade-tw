@@ -87,10 +87,8 @@ const translate = () => {
       for (const [element, text, original] of [[name, localizedName, originalName], [type, localizedType, originalType]]) {
         if (!element || !text || text === original) continue
         element.textContent = text
-        const english = document.createElement('div')
-        english.style.cssText = 'color: #83838d; font-size: 12px;'
-        english.textContent = original
-        element.appendChild(english)
+        // Native header lines have a fixed layout; keep English in the tooltip.
+        element.title = original
       }
       if (localizedType) header.classList.add('translated')
     })
