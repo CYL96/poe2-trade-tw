@@ -33,7 +33,7 @@ chrome.storage.local.get('language', ({ language }) => {
       fetch(chrome.runtime.getURL('json/passivesNotable.json')).then((response) => response.json()),
       fetch(chrome.runtime.getURL('json/translate.json')).then((response) => response.json()),
     ]).then(([notables, names]) => {
-      passivesNotable = notables
+      passivesNotable = notables.passives
       itemNames = names
       checkLoaded()
     })
@@ -205,12 +205,21 @@ const translate = () => {
         const colourAugmented = elm.querySelector('.colourAugmented')
         const description = elm.querySelector('.lc')
         if (!colourAugmented || !description) return
-        const name = colourAugmented.innerText.trim()
-        const localized = passivesNotable[name]?.[lang]
-        if (!localized) return
+        const name = colourAugmented.innerText.replace(/\s+/g, ' ').trim()
         const lines = description.innerHTML.split(/<br\s*\/?\s*>/i)
-        // Do not erase effects when the stored description does not match this item.
-        if (lines.length - 1 !== localized.desc.length) return
+        const effects = lines.slice(1).map((html) => {
+          const text = document.createElement('span')
+          text.innerHTML = html
+          return text.textContent
+        }).join(' ')
+        // Line wrapping and capitalization are presentation, not passive identity.
+        const normalize = (text) => text.replace(/\s+/g, '').toLowerCase()
+        const variant = passivesNotable[name]?.find((entry) =>
+          normalize(entry.en.desc.join(' ')) === normalize(effects)
+        )
+        const localized = variant?.[lang]
+        // Never replace an unknown or changed effect with a same-name passive.
+        if (!localized) return
         const english = document.createElement('div')
         english.style.cssText = 'color: #83838d; font-size: 12px;'
         english.textContent = description.innerText
