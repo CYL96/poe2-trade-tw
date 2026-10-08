@@ -208,8 +208,11 @@ const translate = () => {
           text.innerHTML = html
           return text.textContent
         }).join(' ')
-        // Wrapping, capitalization, and Cooldown Use/Uses do not change the effect.
-        const normalize = (text) => text.replace(/\bCooldown Uses\b/gi, 'Cooldown Use').replace(/\s+/g, '').toLowerCase()
+        // Normalize known equivalent grammar, retaining every number and condition.
+        const normalize = (text) => text
+          .replace(/\bCooldown Uses\b/gi, 'Cooldown Use')
+          .replace(/\bRemove (?:up to 1 Curses?|a Curse)\b/gi, 'Remove 1 Curse')
+          .replace(/\s+/g, '').toLowerCase()
         const variant = passivesNotable[name]?.find((entry) =>
           normalize(entry.en.desc.join(' ')) === normalize(effects)
         )
@@ -218,7 +221,12 @@ const translate = () => {
         if (!localized) return
         const english = document.createElement('div')
         english.style.cssText = 'color: #83838d; font-size: 12px;'
-        english.textContent = description.innerText
+        lines.forEach((html, index) => {
+          const text = document.createElement('span')
+          text.innerHTML = html
+          if (index) english.appendChild(document.createElement('br'))
+          english.appendChild(document.createTextNode(text.textContent))
+        })
         colourAugmented.textContent = localized.name
         description.replaceChildren(colourAugmented)
         for (const text of localized.desc) {
