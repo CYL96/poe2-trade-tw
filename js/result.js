@@ -70,9 +70,20 @@ const matchAffix = (template, text) => {
 
 const normalizePassiveName = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase()
 const normalizePassiveEffect = (text) => text
-  .replace(/\bCooldown Uses\b/gi, 'Cooldown Use')
-  .replace(/\bRemove (?:up to 1 Curses?|a Curse)\b/gi, 'Remove 1 Curse')
-  .replace(/\s+/g, '').toLowerCase()
+  .replace(/\s+/g, ' ').trim().toLowerCase()
+  .replace(/\bcooldown uses\b/g, 'cooldown use')
+  .replace(/\bremove (?:up to 1 curses?|a curse)\b/g, 'remove 1 curse')
+  // These client article variants represent exactly one, not an omitted quantity.
+  .replace(/\ban? additional (projectiles?|arrows?|targets?|attacks?|curses?|power charges?|combo)\b/g, '1 additional $1')
+  .replace(/\ba vivid wisp\b/g, '1 vivid wisp')
+  .replace(/\btwo additional projectiles?\b/g, '2 additional projectiles')
+  // The client omits the count only for the value-one adaptation variant.
+  .replace(/\badapt to the highest elemental damage type of each hit you take\b/g,
+    'adapt 1 time to the highest elemental damage type of each hit you take')
+  // Normalize countable units, never arbitrary plural words or signed values.
+  .replace(/([+-]?\d+(?:\.\d+)? (?:additional |(?:to )?maximum (?:number of )?)?)(projectiles?|arrows?|targets?|attacks?|curses?|(?:power |frenzy |endurance |life flask )?charges?|charm slots?|(?:additional )?skill slots?|passive skill points?|vivid wisps?|times?|seconds?|(?:cold |fire |lightning |elemental )infusions?|(?:summoned (?:ballista )?)?totems?|placed banners?|stacks?)\b/g,
+    (whole, count, unit) => count + unit.replace(/s$/, ''))
+  .replace(/\s+/g, '')
 
 // Consume complete source effects in any order, not individual words or values.
 // Flattening only the page lets an effect wrap across breaks or share a line.

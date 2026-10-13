@@ -11,12 +11,12 @@ const chakra = [
   '+1 to Stun Threshold per Dexterity',
 ]
 
-async function matcher(passives = snapshot.passives) {
+async function matcher(passives = snapshot.passives, language = 'zh_tw') {
   const context = vm.createContext({
     chrome: {
       storage: { local: { get(key, callback) {
-        callback(key === 'language' ? { language: 'zh_tw' } : {
-          cache_zh_tw: { stats: { result: [] } }, cache_us: { stats: { result: [] } },
+        callback(key === 'language' ? { language } : {
+          [`cache_${language}`]: { stats: { result: [] } }, cache_us: { stats: { result: [] } },
         })
       } } },
       runtime: { getURL: (path) => path },
@@ -40,6 +40,101 @@ test('Megalomaniac effects match in all six orders without changing translation'
     assert.deepEqual(Array.from(translated.desc), snapshot.passives['Chakra of Stability'][0].zh_tw.desc)
   }
   assert.equal(match('Strong Chin', snapshot.passives['Strong Chin'][0].en.desc.join('\n')).name, '強力下顎')
+})
+
+test('Cluster Bombs accepts one additional projectile grammar without guessing quantities', () => {
+  const detonation = '50% increased Grenade Detonation Time'
+  const projectile = 'Grenade Skills Fire an additional Projectile'
+  for (const text of [projectile, 'Grenade Skills Fire 1 additional Projectile', 'Grenade Skills Fire 1 additional Projectiles']) {
+    const translated = match('Cluster Bombs', `${detonation}\n${text}`)
+    assert.equal(translated?.name, '團簇炸彈')
+    assert.deepEqual(Array.from(translated.desc), ['增加50%擲彈引爆時間', '擲彈技能發射額外1個投射物'])
+  }
+  assert.equal(match('Cluster Bombs', `${projectile}\n${detonation}`)?.name, '團簇炸彈')
+  for (const text of [
+    'Grenade Skills Fire 2 additional Projectiles', 'Grenade Skills Fire -1 additional Projectile',
+    'Grenade Skills Fire no additional Projectile', `${projectile} when Stunned`,
+  ]) assert.equal(match('Cluster Bombs', `${detonation}\n${text}`), undefined)
+  assert.equal(match('Cluster Bombs', `51% increased Grenade Detonation Time\n${projectile}`), undefined)
+  assert.equal(match('Cluster Bombs', projectile), undefined)
+})
+
+test('counted effect grammar covers other passive families without discarding counts or conditions', () => {
+  const cases = [
+    ['Pierce the Heart', 'Arrows Pierce an additional Target'],
+    ['Vocal Empowerment', 'Warcries Empower an additional Attack'],
+    ["Hunter's Talisman", '+1 Charm Slot'],
+    ['Intricate Sigils', '+1 Charm Slot'],
+    ['One with the Storm', 'Quarterstaff Skills that consume Power Charges count as consuming 1 additional Power Charge'],
+    ['One with the Storm', 'Quarterstaff Skills that consume Power Charges count as consuming an additional Power Charge'],
+    ['Martial Adept', 'When you gain Combo, gain an additional Combo'],
+    ['Reactive Growth', 'Adapt 1 time to the highest Elemental Damage Type of each Hit you take'],
+    ['Reactive Growth', 'Adapt to the highest Elemental Damage Type of each Hit you take'],
+    ["The Mórrigan's Guidance", 'Gain 1 Vivid Wisp when Vivid Stampede ends'],
+    ["The Mórrigan's Guidance", 'Gain a Vivid Wisp when Vivid Stampede ends'],
+    ['Sanguine Tides', 'Gain 1 Life Flask Charge per 2% Life spent'],
+    ['Incessant Cacophony', 'You can apply 1 additional Curses'],
+    ['Whispers of Doom', 'You can apply 1 additional Curse'],
+    ['Vale Shelter', 'Charms gain 0.15 charge per Second'],
+    ['Augmented Flesh', 'Grants 2 additional Skill Slot'],
+    ['Passive Point', 'Grants 1 Passive Skill Point'],
+    ['Passive Points', 'Grants 1 Passive Skill Point'],
+    ['Run and Gun', 'Projectile Attacks have a 12% chance to fire 2 additional Projectiles while moving'],
+    ['Quick Fingers', '+24% Surpassing chance to fire 1 additional Arrows'],
+    ['Grenadier', 'Grenade Skills have +1 Cooldown Use'],
+    ['Draiocht Cleansing', 'Remove a Curse after Channelling for 2 seconds'],
+  ]
+  for (const [name, line] of cases) {
+    const original = snapshot.passives[name][0]
+    const effects = original.en.desc.join('\n')
+    const replacementIndex = original.en.desc.findIndex((effect) =>
+      effect.toLowerCase().split(/\s+/)[0] === line.toLowerCase().split(/\s+/)[0])
+    assert.ok(replacementIndex >= 0, name)
+    const page = original.en.desc.with(replacementIndex, line).join('\n')
+    const localized = match(name, page)
+    assert.equal(localized?.name, original.zh_tw.name, `${name}: ${line}`)
+    assert.deepEqual(Array.from(localized.desc), original.zh_tw.desc, name)
+    assert.equal(match(name, `${page}\n${line}`), undefined, `${name}: duplicate`)
+    assert.equal(match(name, page.replace(line, `${line} when Frozen`)), undefined, `${name}: extra condition`)
+    assert.equal(match(name, effects)?.name, original.zh_tw.name, `${name}: original`)
+  }
+  for (const [name, page] of [
+    ['Pierce the Heart', 'Arrows Pierce 2 additional Targets'],
+    ['Vocal Empowerment', 'Warcries Empower -1 additional Attacks'],
+    ["Hunter's Talisman", '-1 Charm Slot'],
+    ['Vale Shelter', 'Charms gain 0.16 charge per Second'],
+    ['One with the Storm', 'Quarterstaff Skills that consume Frenzy Charges count as consuming 1 additional Power Charge'],
+    ['Reactive Growth', 'Adapt 2 times to the highest Elemental Damage Type of each Hit you take'],
+    ['Reactive Growth', 'Adapt to the lowest Elemental Damage Type of each Hit you take'],
+  ]) assert.equal(match(name, page), undefined, name)
+})
+
+test('every localized snapshot variant preserves effects when reordered or rewrapped', async () => {
+  for (const language of ['zh_tw', 'zh_cn']) {
+    const localizedMatch = language === 'zh_tw' ? match : await matcher(snapshot.passives, language)
+    for (const [name, entries] of Object.entries(snapshot.passives)) {
+      for (const entry of entries) {
+        if (!entry.en.desc.length) continue
+        const reversed = [...entry.en.desc].reverse()
+        for (const page of [reversed.join('\n'), reversed.join(' ').replace(/ /g, '\n')]) {
+          const localized = localizedMatch(name, page)
+          assert.equal(localized?.name, entry[language].name, `${language}: ${name}: ${entry.ids}`)
+          assert.deepEqual(Array.from(localized.desc), entry[language].desc, `${language}: ${name}: ${entry.ids}`)
+        }
+      }
+    }
+  }
+})
+
+test('snapshot-wide numeric changes never select a stale same-name effect', () => {
+  for (const [name, entries] of Object.entries(snapshot.passives)) {
+    for (const entry of entries) {
+      const text = entry.en.desc.join('\n')
+      if (!/\d/.test(text)) continue
+      const changed = text.replace(/\d+(?:\.\d+)?/, '987654321')
+      assert.equal(match(name, changed), undefined, `${name}: ${entry.ids}`)
+    }
+  }
 })
 
 test('complete effects may wrap or share lines; names ignore case and whitespace', () => {
