@@ -56930,22 +56930,19 @@
         "en": {
           "name": "Thaumaturgic Generator",
           "desc": [
-            "Grants Thaumaturgical Dynamism",
-            "gain random charge every X ms from total socketed gem attribute requirements [5000]"
+            "Grants Thaumaturgical Dynamism"
           ]
         },
         "zh_tw": {
           "name": "奇術發動機",
           "desc": [
-            "賦予奇術活力",
-            "內部資料：依插槽寶石能力需求總和，每隔指定毫秒獲得隨機能量球 [5000]"
+            "賦予奇術活力"
           ]
         },
         "zh_cn": {
           "name": "奇术发生器",
           "desc": [
-            "赋予奇术活力",
-            "内部数据：依插槽宝石属性需求总和，每隔指定毫秒获得随机充能球 [5000]"
+            "赋予奇术活力"
           ]
         }
       }

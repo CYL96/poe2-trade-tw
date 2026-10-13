@@ -32,10 +32,14 @@ const internalFields = {
   'stone skin grants damage reduction life threshold % [30]': ['內部資料：石膚傷害減免的生命門檻百分比 [30]', '内部数据：石肤伤害减免的生命阈值百分比 [30]'],
   'stone skin grants damage taken +% final [-40]': ['內部資料：石膚承受傷害最終百分比加成 [-40]', '内部数据：石肤承受伤害最终百分比加成 [-40]'],
   'stone skin grants stun threshold +% final [50]': ['內部資料：石膚暈眩門檻最終百分比加成 [50]', '内部数据：石肤晕眩阈值最终百分比加成 [50]'],
-  'gain random charge every X ms from total socketed gem attribute requirements [5000]': ['內部資料：依插槽寶石能力需求總和，每隔指定毫秒獲得隨機能量球 [5000]', '内部数据：依插槽宝石属性需求总和，每隔指定毫秒获得随机充能球 [5000]'],
   'base max adaptations [3]': ['內部資料：基礎適應層數上限 [3]', '内部数据：基础适应层数上限 [3]'],
   'gain unbound ailment stacks [1]': ['內部資料：獲得無縛異常狀態層數 [1]', '内部数据：获得无缚异常状态层数 [1]'],
 }
+
+// Thaumaturgic Generator's charge interval is not part of its displayed grant.
+const hiddenFields = new Set([
+  'gain random charge every X ms from total socketed gem attribute requirements [5000]',
+])
 
 function plainText(text) {
   return text.replace(/\[([^\]|]+)(?:\|([^\]]+))?\]/g, (whole, key, label) => {
@@ -48,6 +52,7 @@ function plainText(text) {
 
 function lines(stats, language) {
   return stats.flatMap((stat) => {
+    if (hiddenFields.has(stat)) return []
     const override = language === 'us' ? null : internalFields[stat]?.[language === 'tw' ? 0 : 1]
     return plainText(override ?? stat).split(/\r?\n/)
   }).map((line) => line.trim()).filter(Boolean)

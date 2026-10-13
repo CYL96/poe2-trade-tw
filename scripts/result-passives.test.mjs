@@ -42,6 +42,21 @@ test('Megalomaniac effects match in all six orders without changing translation'
   assert.equal(match('Strong Chin', snapshot.passives['Strong Chin'][0].en.desc.join('\n')).name, '強力下顎')
 })
 
+test('Thaumaturgic Generator matches its visible grant without exposing hidden mechanics', async () => {
+  for (const language of ['zh_tw', 'zh_cn']) {
+    const local = language === 'zh_tw' ? match : await matcher(snapshot.passives, language)
+    const translated = local('Thaumaturgic Generator', 'Grants Thaumaturgical Dynamism')
+    assert.equal(translated?.name, language === 'zh_tw' ? '奇術發動機' : '奇术发生器')
+    assert.deepEqual(Array.from(translated.desc), [language === 'zh_tw' ? '賦予奇術活力' : '赋予奇术活力'])
+    for (const effect of [
+      '', 'Grants Thaumaturgical Infusion',
+      'Grants Thaumaturgical Dynamism when Hit',
+      'Grants Thaumaturgical Dynamism\nGrants Thaumaturgical Dynamism',
+      'Grants Thaumaturgical Dynamism\ngain random charge every X ms from total socketed gem attribute requirements [5000]',
+    ]) assert.equal(local('Thaumaturgic Generator', effect), undefined, effect)
+  }
+})
+
 test('Cluster Bombs accepts one additional projectile grammar without guessing quantities', () => {
   const detonation = '50% increased Grenade Detonation Time'
   const projectile = 'Grenade Skills Fire an additional Projectile'

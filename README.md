@@ -106,6 +106,8 @@
 
 天赋说明按英文名称及实际英文效果匹配，同名不同效果分别翻译。效果以完整词条为单位无序匹配，兼容妄想症在交易页与天赋数据中排列顺序不同的情况（如「穩定脈輪」）；每条效果必须恰好消费一次，不允许缺失、重复或额外效果。页面可在效果内部换行或把多条效果放在同一行，中英文换行数量不必相同；英文对照保留页面原文名称、各条效果及原有换行。名称及效果匹配忽略大小写和空白，效果还兼容 `Cooldown Use/Uses` 单复数及 `Remove a Curse/Remove up to 1 Curses` 等价写法；数值、正负号及触发条件仍严格匹配。未知名称、效果变化或同名同效果存在冲突翻译时保留原文，不拿旧版效果替换。「配置天赋」名称也读取同一份本地天赋表，名称翻译不唯一时保留英文。上游未本地化的内部字段采用标明「內部資料」的直译并保留原文，不将字段值猜成游戏效果。
 
+「奇術發動機」按用户实际页面仅匹配并显示 `Grants Thaumaturgical Dynamism`（賦予奇術活力）。同步时从三种语言的效果列表中排除上游额外导出的内部充能间隔字段 `gain random charge every X ms from total socketed gem attribute requirements [5000]`，避免该不可见字段阻断翻译或被插入页面；其他未核实的内部字段不自动排除，完整效果校验保持不变。
+
 计数措辞按已核实的客户端描述与官方交易属性索引归一化，不按天赋名称特判：兼容「團簇炸彈」的 `an additional Projectile` / `1 additional Projectiles`、额外箭矢、穿透目标、战吼攻击、暴击球与连击的冠词写法，以及护符槽位、充能、技能槽位等已收录计数单位的单复数。`two additional Projectiles` 等同于额外2个投射物；`a Vivid Wisp` 等同于 `1 Vivid Wisp`。`Reactive Growth` 的客户端省略数量写法 `Adapt to the highest Elemental Damage Type of each Hit you take` 仅等同于数据中的 `Adapt 1 times...`，不匹配2次或其他伤害类型。归一化始终保留数值、正负号、引爆时间和触发条件，不泛化任意英文复数。客户端分支依据 [RePoE PoE2 通用描述表](https://github.com/repoe-fork/poe2/blob/master/data/stat_translations/stat_descriptions.json)与[天赋描述表](https://github.com/repoe-fork/poe2/blob/master/data/stat_translations/passive_skill_stat_descriptions.json)。
 
 **维护天赋数据**（安装 Node.js 后执行；用户安装扩展不需要执行）：`node scripts/update-passives.mjs` 重新获取中英数据、按天赋 ID 对齐并生成本地快照；`node scripts/update-passives.mjs --check` 校验本地快照与上游数据一致。同步脚本会拒绝缺失翻译或同一英文效果对应互相冲突的中文效果；上游快照版本改变时，先更新脚本中的数据路径，再执行同步与浏览器验证。
