@@ -1,10 +1,8 @@
 const affix_zh = {}
 const affix_us = {}
 // passives Notable description
-let passivesNotable = []
+let passivesNotable = new Map()
 let itemNames = {}
-let passives_notable_zh = {}
-let passives_notable_us = {}
 
 // language
 let lang = ''
@@ -33,7 +31,13 @@ chrome.storage.local.get('language', ({ language }) => {
       fetch(chrome.runtime.getURL('json/passivesNotable.json')).then((response) => response.json()),
       fetch(chrome.runtime.getURL('json/translate.json')).then((response) => response.json()),
     ]).then(([notables, names]) => {
-      passivesNotable = notables.passives
+      passivesNotable = new Map(Object.entries(notables.passives).map(([name, variants]) => [
+        normalizePassiveName(name),
+        variants.map((entry) => ({
+          ...entry,
+          effects: entry.en.desc.map(normalizePassiveEffect).filter(Boolean).sort(),
+        })),
+      ]))
       itemNames = names
       checkLoaded()
     })
@@ -62,6 +66,46 @@ const matchAffix = (template, text) => {
     part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*')
   ).join('\\s*([+\\-\\d(][\\d.,+\\-()—–\\s]*?)\\s*')
   return new RegExp(`^\\s*${pattern}\\s*$`, 'i').exec(text)
+}
+
+const normalizePassiveName = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase()
+const normalizePassiveEffect = (text) => text
+  .replace(/\bCooldown Uses\b/gi, 'Cooldown Use')
+  .replace(/\bRemove (?:up to 1 Curses?|a Curse)\b/gi, 'Remove 1 Curse')
+  .replace(/\s+/g, '').toLowerCase()
+
+// Consume complete source effects in any order, not individual words or values.
+// Flattening only the page lets an effect wrap across breaks or share a line.
+const matchesPassiveEffects = (expected, actual) => {
+  if (!expected.length || expected.reduce((length, effect) => length + effect.length, 0) !== actual.length) return false
+  const used = new Set()
+  const consume = (offset) => {
+    if (used.size === expected.length) return offset === actual.length
+    for (let index = 0; index < expected.length; index++) {
+      if (used.has(index) || (index && expected[index] === expected[index - 1] && !used.has(index - 1))) continue
+      const effect = expected[index]
+      if (!actual.startsWith(effect, offset)) continue
+      used.add(index)
+      if (consume(offset + effect.length)) return true
+      used.delete(index)
+    }
+    return false
+  }
+  return consume(0)
+}
+
+const matchPassive = (name, effects) => {
+  const actual = normalizePassiveEffect(effects)
+  let localized
+  for (const entry of passivesNotable.get(normalizePassiveName(name)) ?? []) {
+    if (!matchesPassiveEffects(entry.effects, actual) || !entry[lang]) continue
+    const candidate = entry[lang]
+    // Reordered duplicates must not silently choose conflicting translations.
+    if (localized && (localized.name !== candidate.name || localized.desc.length !== candidate.desc.length ||
+      localized.desc.some((line, index) => line !== candidate.desc[index]))) return null
+    localized = candidate
+  }
+  return localized
 }
 
 let timer
@@ -139,17 +183,12 @@ const translate = () => {
         if (field === 'explicit.stat_1923879260') {
           zhString = '攻擊有 #% 機率造成流血'
         }
-        // Cluster Jewel - Added Small Passive Skills grant
         if (field === 'enchant.stat_2954116742') {
-          // passives Notable
-          let passivesNotableString = originalString.split('Allocates ')[1]
-          let passivesNotableIndex = passives_notable_us.findIndex(({ text }) => text === passivesNotableString)
-          let passivesNotableZh = passives_notable_zh[passivesNotableIndex]
-          if (!!passivesNotableZh) {
-            zhString = zhString.replace('#', '') + passivesNotableZh.text
-          } else {
-            zhString = elm.innerText
-          }
+          const name = /^\s*Allocates\s+(.+?)\s*$/i.exec(originalString)?.[1]
+          const variants = name && passivesNotable.get(normalizePassiveName(name))
+          const localizedNames = new Set(variants?.map((entry) => entry[lang]?.name).filter(Boolean))
+          if (localizedNames.size !== 1) return
+          zhString = zhString.replace('#', localizedNames.values().next().value)
         } else if (!!~usString.indexOf('#')) {
           // commom
           // fixed " (Local)"
@@ -208,15 +247,7 @@ const translate = () => {
           text.innerHTML = html
           return text.textContent
         }).join(' ')
-        // Normalize known equivalent grammar, retaining every number and condition.
-        const normalize = (text) => text
-          .replace(/\bCooldown Uses\b/gi, 'Cooldown Use')
-          .replace(/\bRemove (?:up to 1 Curses?|a Curse)\b/gi, 'Remove 1 Curse')
-          .replace(/\s+/g, '').toLowerCase()
-        const variant = passivesNotable[name]?.find((entry) =>
-          normalize(entry.en.desc.join(' ')) === normalize(effects)
-        )
-        const localized = variant?.[lang]
+        const localized = matchPassive(name, effects)
         // Never replace an unknown or changed effect with a same-name passive.
         if (!localized) return
         const english = document.createElement('div')
